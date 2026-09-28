@@ -1,0 +1,947 @@
+openapi: 3.0.3
+
+info:
+  title: DevTrack API
+  description: |
+    REST API for DevTrack, a developer issue and project management system.
+
+    The API provides authentication, user management, project management,
+    project membership management, and issue management.
+
+    Protected endpoints require a JWT access token using the Bearer scheme.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+
+tags:
+  - name: Users
+    description: User registration, authentication, and administration
+  - name: Projects
+    description: Project management and team membership
+  - name: Issues
+    description: Issue management, filtering, search, and pagination
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "6ab8203dca7fb75d84ee3920"
+        name:
+          type: string
+          example: "DevTrack Member Test"
+        email:
+          type: string
+          format: email
+          example: "developer@example.com"
+        role:
+          type: string
+          enum:
+            - developer
+            - admin
+          example: developer
+
+    UserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "User created successfully"
+        user:
+          $ref: "#/components/schemas/User"
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Login successful"
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: "#/components/schemas/User"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: "John Developer"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "password123"
+        role:
+          type: string
+          enum:
+            - developer
+            - admin
+          default: developer
+          example: developer
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+    UpdateRoleRequest:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum:
+            - developer
+            - admin
+          example: admin
+
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        name:
+          type: string
+          example: "DevTrack Membership Test"
+        description:
+          type: string
+          example: "Project management system"
+        owner:
+          $ref: "#/components/schemas/User"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        status:
+          type: string
+          enum:
+            - active
+            - completed
+            - archived
+          example: active
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "New DevTrack Project"
+        description:
+          type: string
+          example: "A new software development project"
+        members:
+          type: array
+          items:
+            type: string
+          example:
+            - "6ab8203dca7fb75d84ee3920"
+        status:
+          type: string
+          enum:
+            - active
+            - completed
+            - archived
+          default: active
+          example: active
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Updated DevTrack Project"
+        description:
+          type: string
+          example: "Updated project description"
+        members:
+          type: array
+          items:
+            type: string
+          example:
+            - "6ab8203dca7fb75d84ee3920"
+        status:
+          type: string
+          enum:
+            - active
+            - completed
+            - archived
+          example: completed
+
+    AddProjectMemberRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          example: "6ab8203dca7fb75d84ee3920"
+
+    Issue:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "6ab824db726aa55c64e5b430"
+        title:
+          type: string
+          example: "Fix login validation"
+        description:
+          type: string
+          example: "Improve validation for invalid login credentials"
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+          example:
+            _id: "6ab81fcdca7fb75d84ee391f"
+            name: "DevTrack Membership Test"
+        assignedTo:
+          type: object
+          nullable: true
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        createdBy:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          example: high
+        status:
+          type: string
+          enum:
+            - open
+            - in-progress
+            - resolved
+            - closed
+          example: open
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateIssueRequest:
+      type: object
+      required:
+        - title
+        - project
+      properties:
+        title:
+          type: string
+          example: "Fix authentication bug"
+        description:
+          type: string
+          example: "Investigate JWT authentication failure"
+        project:
+          type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        assignedTo:
+          type: string
+          nullable: true
+          example: "6ab8203dca7fb75d84ee3920"
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          default: medium
+          example: high
+        status:
+          type: string
+          enum:
+            - open
+            - in-progress
+            - resolved
+            - closed
+          default: open
+          example: open
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-10-15T18:30:00.000Z"
+
+    UpdateIssueRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Updated authentication bug"
+        description:
+          type: string
+          example: "Updated issue description"
+        project:
+          type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        assignedTo:
+          type: string
+          nullable: true
+          example: "6ab8203dca7fb75d84ee3920"
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          example: critical
+        status:
+          type: string
+          enum:
+            - open
+            - in-progress
+            - resolved
+            - closed
+          example: in-progress
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-10-20T18:30:00.000Z"
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        totalIssues:
+          type: integer
+          example: 25
+        totalPages:
+          type: integer
+          example: 3
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPreviousPage:
+          type: boolean
+          example: false
+
+    IssueListResponse:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/Issue"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+paths:
+
+  /api/users:
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Creates a new developer or admin account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Invalid request
+        "409":
+          description: User with this email already exists
+
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      description: Returns all users without exposing password fields.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          description: Authentication required
+
+  /api/users/login:
+    post:
+      tags:
+        - Users
+      summary: Login user
+      description: Authenticates a user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Email and password are required
+        "401":
+          description: Invalid email or password
+
+  /api/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get a user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab8203dca7fb75d84ee3920"
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid ID format
+        "404":
+          description: User not found
+        "401":
+          description: Authentication required
+
+    put:
+      tags:
+        - Users
+      summary: Update user role
+      description: Updates a user's role. Requires administrator access.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab8203dca7fb75d84ee3920"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoleRequest"
+      responses:
+        "200":
+          description: User role updated successfully
+        "400":
+          description: Invalid role or self-role change
+        "401":
+          description: Authentication required
+        "403":
+          description: Admin access required
+        "404":
+          description: User not found
+
+    delete:
+      tags:
+        - Users
+      summary: Delete a user
+      description: Deletes a user if the user does not own projects or have created issues.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab8203dca7fb75d84ee3920"
+      responses:
+        "200":
+          description: User deleted successfully
+        "400":
+          description: User cannot be deleted
+        "401":
+          description: Authentication required
+        "403":
+          description: Admin access required
+        "404":
+          description: User not found
+
+  /api/projects:
+    post:
+      tags:
+        - Projects
+      summary: Create a project
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created successfully
+        "400":
+          description: Invalid project data
+        "401":
+          description: Authentication required
+
+    get:
+      tags:
+        - Projects
+      summary: Get all projects
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        "401":
+          description: Authentication required
+
+  /api/projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get a project by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid project ID
+        "404":
+          description: Project not found
+
+    put:
+      tags:
+        - Projects
+      summary: Update a project
+      description: Only the project owner can update the project.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+      responses:
+        "200":
+          description: Project updated successfully
+        "400":
+          description: Invalid project data
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the project owner can update the project
+        "404":
+          description: Project not found
+
+    delete:
+      tags:
+        - Projects
+      summary: Delete a project
+      description: Only the project owner can delete the project. Its issues are deleted with it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+      responses:
+        "200":
+          description: Project and its issues deleted successfully
+        "400":
+          description: Invalid project ID
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the project owner can delete the project
+        "404":
+          description: Project not found
+
+  /api/projects/{id}/members:
+    post:
+      tags:
+        - Projects
+      summary: Add a project member
+      description: Only the project owner can add members.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddProjectMemberRequest"
+      responses:
+        "200":
+          description: Project member added successfully
+        "400":
+          description: Invalid user or project data
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the project owner can add members
+        "404":
+          description: Project or user not found
+        "409":
+          description: User is already a project member
+
+  /api/projects/{id}/members/{userId}:
+    delete:
+      tags:
+        - Projects
+      summary: Remove a project member
+      description: Only the project owner can remove members.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab8203dca7fb75d84ee3920"
+      responses:
+        "200":
+          description: Project member removed successfully
+        "400":
+          description: Invalid user or project ID
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the project owner can remove members
+        "404":
+          description: Project or member not found
+
+  /api/issues:
+    post:
+      tags:
+        - Issues
+      summary: Create an issue
+      description: Creates an issue for a project where the authenticated user is the owner or a member.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueRequest"
+      responses:
+        "201":
+          description: Issue created successfully
+        "400":
+          description: Invalid issue data
+        "401":
+          description: Authentication required
+        "403":
+          description: User is not a member of the project
+        "404":
+          description: Project or assigned user not found
+
+    get:
+      tags:
+        - Issues
+      summary: Get issues
+      description: Returns issues with optional filtering, search, and pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          description: Filter issues by project ID
+          required: false
+          schema:
+            type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        - name: status
+          in: query
+          description: Filter issues by status
+          required: false
+          schema:
+            type: string
+            enum:
+              - open
+              - in-progress
+              - resolved
+              - closed
+        - name: priority
+          in: query
+          description: Filter issues by priority
+          required: false
+          schema:
+            type: string
+            enum:
+              - low
+              - medium
+              - high
+              - critical
+        - name: assignedTo
+          in: query
+          description: Filter issues by assigned user ID
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search issue titles and descriptions
+          required: false
+          schema:
+            type: string
+          example: authentication
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Number of issues per page. Maximum 100.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        "200":
+          description: Issues retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueListResponse"
+        "400":
+          description: Invalid filter or pagination parameter
+        "401":
+          description: Authentication required
+
+  /api/issues/{id}:
+    get:
+      tags:
+        - Issues
+      summary: Get an issue by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+      responses:
+        "200":
+          description: Issue found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issue"
+        "400":
+          description: Invalid ID format
+        "401":
+          description: Authentication required
+        "404":
+          description: Issue not found
+
+    put:
+      tags:
+        - Issues
+      summary: Update an issue
+      description: Only the issue creator can update the issue.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIssueRequest"
+      responses:
+        "200":
+          description: Issue updated successfully
+        "400":
+          description: Invalid issue data
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the issue creator can update this issue
+        "404":
+          description: Issue, project, or assigned user not found
+
+    delete:
+      tags:
+        - Issues
+      summary: Delete an issue
+      description: Only the issue creator can delete the issue.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+      responses:
+        "200":
+          description: Issue deleted successfully
+        "400":
+          description: Invalid issue ID
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the issue creator can delete the issue
+        "404":
+          description: Issue not found
