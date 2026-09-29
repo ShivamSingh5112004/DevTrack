@@ -3,6 +3,59 @@ const Project = require("../models/Project");
 const User = require("../models/User");
 const Issue = require("../models/Issue");
 
+// Validate and normalize project member IDs
+const validateProjectMembers = async (members, ownerId) => {
+    if (members === undefined) {
+        return undefined;
+    }
+
+    if (!Array.isArray(members)) {
+        const error = new Error("Members must be an array");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const uniqueMembers = [...new Set(members)];
+
+    const invalidMemberId = uniqueMembers.find(
+        (memberId) => !mongoose.isValidObjectId(memberId)
+    );
+
+    if (invalidMemberId) {
+        const error = new Error("One or more member IDs are invalid");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (uniqueMembers.includes(ownerId.toString())) {
+        const error = new Error(
+            "Project owner cannot be added as a project member"
+        );
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const existingUsers = await User.find({
+        _id: { $in: uniqueMembers }
+    }).select("_id");
+
+    const existingUserIds = new Set(
+        existingUsers.map((user) => user._id.toString())
+    );
+
+    const missingUserId = uniqueMembers.find(
+        (memberId) => !existingUserIds.has(memberId.toString())
+    );
+
+    if (missingUserId) {
+        const error = new Error("One or more users do not exist");
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return uniqueMembers;
+};
+
 // Create a new project
 const createProject = async (req, res, next) => {
     try {
@@ -14,30 +67,16 @@ const createProject = async (req, res, next) => {
             });
         }
 
-        // Validate members input if provided
-        if (members !== undefined) {
-            if (!Array.isArray(members)) {
-                return res.status(400).json({
-                    message: "Members must be an array"
-                });
-            }
-
-            const invalidMemberId = members.find(
-                (memberId) => !mongoose.isValidObjectId(memberId)
-            );
-
-            if (invalidMemberId) {
-                return res.status(400).json({
-                    message: "One or more member IDs are invalid"
-                });
-            }
-        }
+        const validatedMembers = await validateProjectMembers(
+            members,
+            req.user.userId
+        );
 
         const project = await Project.create({
             name,
             description,
             owner: req.user.userId,
-            members,
+            members: validatedMembers,
             status
         });
 
@@ -46,6 +85,12 @@ const createProject = async (req, res, next) => {
             project
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                message: error.message
+            });
+        }
+
         next(error);
     }
 };
@@ -102,25 +147,6 @@ const updateProject = async (req, res, next) => {
             });
         }
 
-        // Validate members input if provided
-        if (members !== undefined) {
-            if (!Array.isArray(members)) {
-                return res.status(400).json({
-                    message: "Members must be an array"
-                });
-            }
-
-            const invalidMemberId = members.find(
-                (memberId) => !mongoose.isValidObjectId(memberId)
-            );
-
-            if (invalidMemberId) {
-                return res.status(400).json({
-                    message: "One or more member IDs are invalid"
-                });
-            }
-        }
-
         const project = await Project.findById(id);
 
         if (!project) {
@@ -135,6 +161,11 @@ const updateProject = async (req, res, next) => {
             });
         }
 
+        const validatedMembers = await validateProjectMembers(
+            members,
+            project.owner
+        );
+
         if (name !== undefined) {
             project.name = name;
         }
@@ -144,7 +175,7 @@ const updateProject = async (req, res, next) => {
         }
 
         if (members !== undefined) {
-            project.members = members;
+            project.members = validatedMembers;
         }
 
         if (status !== undefined) {
@@ -158,6 +189,12 @@ const updateProject = async (req, res, next) => {
             project
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                message: error.message
+            });
+        }
+
         next(error);
     }
 };

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Issue = require("../models/Issue");
 const Project = require("../models/Project");
 const User = require("../models/User");
+const Comment = require("../models/Comment");
 
 // Create a new issue
 const createIssue = async (req, res, next) => {
@@ -96,7 +97,7 @@ const createIssue = async (req, res, next) => {
     }
 };
 
-// Get issues with filters, search, and pagination
+// Get issues with filters, search, overdue filtering, and pagination
 const getIssues = async (req, res, next) => {
     try {
         const {
@@ -104,7 +105,8 @@ const getIssues = async (req, res, next) => {
             status,
             priority,
             assignedTo,
-            search
+            search,
+            overdue
         } = req.query;
 
         // Pagination
@@ -131,6 +133,17 @@ const getIssues = async (req, res, next) => {
         if (limit > 100) {
             return res.status(400).json({
                 message: "Limit cannot exceed 100"
+            });
+        }
+
+        // Validate overdue filter
+        if (
+            overdue !== undefined &&
+            overdue !== "true" &&
+            overdue !== "false"
+        ) {
+            return res.status(400).json({
+                message: "Overdue must be either true or false"
             });
         }
 
@@ -186,6 +199,40 @@ const getIssues = async (req, res, next) => {
                     description: {
                         $regex: escapedSearch,
                         $options: "i"
+                    }
+                }
+            ];
+        }
+
+        // Apply overdue filter
+        if (overdue === "true") {
+            filter.deadline = {
+                $lt: new Date()
+            };
+
+            filter.status = {
+                $nin: ["resolved", "closed"]
+            };
+        }
+
+        if (overdue === "false") {
+            filter.$or = [
+                {
+                    deadline: {
+                        $gte: new Date()
+                    }
+                },
+                {
+                    deadline: null
+                },
+                {
+                    deadline: {
+                        $exists: false
+                    }
+                },
+                {
+                    status: {
+                        $in: ["resolved", "closed"]
                     }
                 }
             ];
@@ -381,10 +428,15 @@ const deleteIssue = async (req, res, next) => {
             });
         }
 
+        // Delete comments associated with the issue
+        await Comment.deleteMany({
+            issue: req.params.id
+        });
+
         await Issue.findByIdAndDelete(req.params.id);
 
         res.status(200).json({
-            message: "Issue deleted successfully"
+            message: "Issue and its comments deleted successfully"
         });
     } catch (error) {
         next(error);

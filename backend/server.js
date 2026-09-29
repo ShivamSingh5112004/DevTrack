@@ -17,7 +17,43 @@ const app = express();
 
 const swaggerDocument = YAML.load("./docs/openapi.yaml");
 
-app.use(cors());
+const PORT = process.env.PORT || 5000;
+
+// CORS configuration
+const allowedOrigins = (
+    process.env.CORS_ORIGIN || "http://localhost:3000"
+)
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests without an Origin header.
+        // This includes tools such as Postman and cURL.
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        // Allow Swagger UI served by this backend during local development.
+        if (
+            process.env.NODE_ENV !== "production" &&
+            origin === `http://localhost:${PORT}`
+        ) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error("CORS policy: Origin not allowed"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check
@@ -42,8 +78,6 @@ app.use((req, res, next) => {
 
 // Centralized error handler
 app.use(errorHandler);
-
-const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     await connectDB();

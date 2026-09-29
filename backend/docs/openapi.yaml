@@ -21,7 +21,7 @@ tags:
   - name: Projects
     description: Project management and team membership
   - name: Issues
-    description: Issue management, filtering, search, and pagination
+    description: Issue management, comments, filtering, search, and pagination
 
 components:
   securitySchemes:
@@ -399,6 +399,57 @@ components:
             $ref: "#/components/schemas/Issue"
         pagination:
           $ref: "#/components/schemas/Pagination"
+
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "6ab99abc726aa55c64e5b450"
+        issue:
+          type: string
+          example: "6ab824db726aa55c64e5b430"
+        author:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        content:
+          type: string
+          example: "I have identified the authentication issue and am working on a fix."
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          example: "I have identified the authentication issue and am working on a fix."
+
+    UpdateCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          example: "Updated comment after reviewing the authentication flow."
 
     MessageResponse:
       type: object
@@ -829,6 +880,13 @@ paths:
           schema:
             type: string
           example: authentication
+        - name: overdue
+          in: query
+          description: Filter issues by overdue status. An issue is overdue when its deadline has passed and its status is not resolved or closed.
+          required: false
+          schema:
+            type: boolean
+          example: true
         - name: page
           in: query
           description: Page number
@@ -924,7 +982,7 @@ paths:
       tags:
         - Issues
       summary: Delete an issue
-      description: Only the issue creator can delete the issue.
+      description: Only the issue creator can delete the issue. Associated comments are deleted with the issue.
       security:
         - bearerAuth: []
       parameters:
@@ -945,3 +1003,156 @@ paths:
           description: Only the issue creator can delete the issue
         "404":
           description: Issue not found
+  /api/issues/{issueId}/comments:
+    post:
+      tags:
+        - Issues
+      summary: Create a comment on an issue
+      description: Creates a comment when the authenticated user is the project owner or a project member.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Comment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  comment:
+                    $ref: "#/components/schemas/Comment"
+        "400":
+          description: Invalid issue ID or comment content
+        "401":
+          description: Authentication required
+        "403":
+          description: User is not a member of the project
+        "404":
+          description: Issue or project not found
+
+    get:
+      tags:
+        - Issues
+      summary: Get comments for an issue
+      description: Returns comments for an issue when the authenticated user is the project owner or a project member.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+      responses:
+        "200":
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "400":
+          description: Invalid issue ID
+        "401":
+          description: Authentication required
+        "403":
+          description: User is not a member of the project
+        "404":
+          description: Issue or project not found
+
+  /api/issues/{issueId}/comments/{commentId}:
+    put:
+      tags:
+        - Issues
+      summary: Update an issue comment
+      description: Only the comment author can update the comment.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab99abc726aa55c64e5b450"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentRequest"
+      responses:
+        "200":
+          description: Comment updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  comment:
+                    $ref: "#/components/schemas/Comment"
+        "400":
+          description: Invalid issue ID, comment ID, or comment content
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the comment author can update this comment
+        "404":
+          description: Comment not found
+
+    delete:
+      tags:
+        - Issues
+      summary: Delete an issue comment
+      description: Only the comment author can delete the comment.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab824db726aa55c64e5b430"
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "6ab99abc726aa55c64e5b450"
+      responses:
+        "200":
+          description: Comment deleted successfully
+        "400":
+          description: Invalid issue ID or comment ID
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the comment author can delete this comment
+        "404":
+          description: Comment not found

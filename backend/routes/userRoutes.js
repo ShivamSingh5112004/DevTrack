@@ -19,9 +19,9 @@ router.post("/", createUser);
 
 router.post("/login", loginUser);
 
-router.get("/", getUsers);
+router.get("/", protect, getUsers);
 
-router.get("/:id", getUserById);
+router.get("/:id", protect, getUserById);
 
 router.put("/:id/role", protect, adminOnly, updateUserRole);
 

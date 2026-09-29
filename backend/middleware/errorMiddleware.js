@@ -9,8 +9,7 @@ const errorHandler = (err, req, res, next) => {
 
     if (err.name === "ValidationError") {
         return res.status(400).json({
-            message: "Validation failed",
-            error: err.message
+            message: "Validation failed"
         });
     }
 
@@ -23,7 +22,9 @@ const errorHandler = (err, req, res, next) => {
     const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
 
     res.status(statusCode).json({
-        message: err.message || "Internal Server Error"
+        message: statusCode === 500
+            ? "Internal Server Error"
+            : err.message || "Internal Server Error"
     });
 };
 

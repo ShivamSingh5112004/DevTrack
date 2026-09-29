@@ -107,9 +107,16 @@ const loginUser = async (req, res, next) => {
 // Get all users
 const getUsers = async (req, res, next) => {
     try {
-        const users = await User.find().select("-password");
+        const users = await User.find().select("name email role");
 
-        res.status(200).json(users);
+        const userResponses = users.map((user) => ({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        }));
+
+        res.status(200).json(userResponses);
     } catch (error) {
         next(error);
     }
@@ -118,7 +125,9 @@ const getUsers = async (req, res, next) => {
 // Get a single user
 const getUserById = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id).select("-password");
+        const user = await User.findById(req.params.id).select(
+            "name email role"
+        );
 
         if (!user) {
             return res.status(404).json({
@@ -126,7 +135,12 @@ const getUserById = async (req, res, next) => {
             });
         }
 
-        res.status(200).json(user);
+        res.status(200).json({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        });
     } catch (error) {
         next(error);
     }
