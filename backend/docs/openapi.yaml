@@ -6,7 +6,7 @@ info:
     REST API for DevTrack, a developer issue and project management system.
 
     The API provides authentication, user management, project management,
-    project membership management, and issue management.
+    project membership management, issue management, and dashboard data.
 
     Protected endpoints require a JWT access token using the Bearer scheme.
   version: 1.0.0
@@ -22,6 +22,8 @@ tags:
     description: Project management and team membership
   - name: Issues
     description: Issue management, comments, filtering, search, and pagination
+  - name: Dashboard
+    description: Dashboard statistics, project progress, and assigned work
 
 components:
   securitySchemes:
@@ -450,6 +452,112 @@ components:
           minLength: 1
           maxLength: 2000
           example: "Updated comment after reviewing the authentication flow."
+
+    DashboardIssueStats:
+      type: object
+      properties:
+        open:
+          type: integer
+          example: 5
+        inProgress:
+          type: integer
+          example: 2
+        resolved:
+          type: integer
+          example: 8
+        closed:
+          type: integer
+          example: 3
+        overdue:
+          type: integer
+          example: 1
+
+    DashboardProjectStats:
+      type: object
+      properties:
+        active:
+          type: integer
+          example: 2
+        total:
+          type: integer
+          example: 3
+
+    DashboardProjectProgress:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        name:
+          type: string
+          example: "DevTrack Membership Test"
+        status:
+          type: string
+          enum:
+            - active
+            - completed
+            - archived
+          example: active
+        totalIssues:
+          type: integer
+          example: 10
+        completedIssues:
+          type: integer
+          example: 7
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 70
+
+    DashboardWorkItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "6ab824db726aa55c64e5b430"
+        title:
+          type: string
+          example: "Fix login validation"
+        project:
+          type: string
+          example: "6ab81fcdca7fb75d84ee391f"
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          example: high
+        status:
+          type: string
+          enum:
+            - open
+            - in-progress
+            - resolved
+            - closed
+          example: in-progress
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+
+    DashboardResponse:
+      type: object
+      properties:
+        issueStats:
+          $ref: "#/components/schemas/DashboardIssueStats"
+        projectStats:
+          $ref: "#/components/schemas/DashboardProjectStats"
+        projectProgress:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardProjectProgress"
+        myWork:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardWorkItem"
 
     MessageResponse:
       type: object
@@ -1000,9 +1108,10 @@ paths:
         "401":
           description: Authentication required
         "403":
-          description: Only the issue creator can delete the issue
+          description: Only the issue creator can delete this issue
         "404":
           description: Issue not found
+
   /api/issues/{issueId}/comments:
     post:
       tags:
@@ -1121,7 +1230,7 @@ paths:
         "401":
           description: Authentication required
         "403":
-          description: Only the comment author can update this comment
+          description: Only the comment author can update the comment
         "404":
           description: Comment not found
 
@@ -1153,6 +1262,24 @@ paths:
         "401":
           description: Authentication required
         "403":
-          description: Only the comment author can delete this comment
+          description: Only the comment author can delete the comment
         "404":
           description: Comment not found
+
+  /api/dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard data
+      description: Returns dashboard statistics, project progress, and issues assigned to the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+        "401":
+          description: Authentication required

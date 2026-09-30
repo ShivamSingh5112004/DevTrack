@@ -10,6 +10,7 @@ const connectDB = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const issueRoutes = require("./routes/issueRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const errorHandler = require("./middleware/errorMiddleware");
 
@@ -68,6 +69,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/issues", issueRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Handle unknown routes
 app.use((req, res, next) => {
