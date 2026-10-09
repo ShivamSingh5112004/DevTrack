@@ -21,12 +21,21 @@ const swaggerDocument = YAML.load("./docs/openapi.yaml");
 const PORT = process.env.PORT || 5000;
 
 // CORS configuration
-const allowedOrigins = (
-    process.env.CORS_ORIGIN || "http://localhost:3000"
+const configuredOrigins = (
+    process.env.CORS_ORIGIN || "http://localhost:5173"
 )
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+const developmentOrigins =
+    process.env.NODE_ENV !== "production"
+        ? ["http://localhost:5173", "http://localhost:3000"]
+        : [];
+
+const allowedOrigins = [
+    ...new Set([...configuredOrigins, ...developmentOrigins])
+];
 
 const corsOptions = {
     origin: (origin, callback) => {
